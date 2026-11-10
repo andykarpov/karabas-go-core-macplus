@@ -22,7 +22,7 @@ module floppy_track_buffer
     // floppy interface to access data in buffer
     output	      ready, // valid track is in buffer
     input [13:0]      addr, // byte requested
-    output reg [7:0]  data, // data returned
+    output [7:0]      data, // data returned  // karabas: from the block RAM below
     output	      dirty,
     
     // data written by IWM and decoded into sector format
@@ -45,7 +45,7 @@ module floppy_track_buffer
     input [8:0]	      sd_addr,
     input	      sd_data_en,
     input [7:0]	      sd_data_in,
-    output reg [7:0]  sd_data_out
+    output [7:0]      sd_data_out  // karabas: from the block RAM below
 );
 
 // Keep track of eject events, 
@@ -191,15 +191,34 @@ assign ready = (track_in_buffer == track_requested) && !track_force_write_back;
 // Otherwise return data as requested by the sd card as a write may be in progress.
 wire [14:0] rd_addr = {1'b0,addr} + (side?{spt, 9'd0}:14'd0);
    
+// karabas: the buffer in block RAM. Its two writes (IWM in state 0, SD card in state 2) and its two
+// reads (data while ready, sd_data_out otherwise) never come together: one write port, one read
+// port. data and sd_data_out keep their last value as the registers of the original did.
+reg  [7:0] tb_q;
+reg        tb_rd_ready;
+reg  [7:0] data_hold, sd_data_out_hold;
+wire [14:0] tb_raddr = ready ? rd_addr : {1'b0, track_sector_to_write, sd_addr};
 always @(posedge clk) begin
-  if(ready)  data <= track_buffer[rd_addr];
-  else       sd_data_out <= track_buffer[{track_sector_to_write, sd_addr}];
+  tb_q <= track_buffer[tb_raddr[13:0]];
+  tb_rd_ready <= ready;
+  data_hold <= data;
+  sd_data_out_hold <= sd_data_out;
 end
+assign data = tb_rd_ready ? tb_q : data_hold;
+assign sd_data_out = tb_rd_ready ? sd_data_out_hold : tb_q;
+
+reg        writeStrobeD;   // karabas: at module level, the write port needs it
+wire [4:0] wr_sector = {1'b0,writeSector}+(side?{1'b0,spt}:5'd0);
+wire       tb_wr_iwm = !rst && (track_loader_state == 8'd0) && ready && (writeStrobe ^ writeStrobeD);
+wire       tb_wr_sd  = !rst && (track_loader_state == 8'd2) && sd_data_en;
+wire [13:0] tb_waddr = tb_wr_iwm ? {wr_sector, writeAddr} : {track_loader_sector, sd_addr};
+wire [7:0]  tb_wdata = tb_wr_iwm ? writeDataDecoded : sd_data_in;
+always @(posedge clk)
+  if(tb_wr_iwm || tb_wr_sd) track_buffer[tb_waddr] <= tb_wdata;
 
 // state machine to make sure the correct track is in buffer
 always @(posedge clk) begin
    reg activityD;   
-   reg writeStrobeD;   
    
    if(rst) begin
       track_in_buffer <= 8'hff;      
@@ -270,9 +289,8 @@ always @(posedge clk) begin
 
 	   // act on falling edge of strobe when all signals had some time to settle
 	   if( writeStrobe ^ writeStrobeD ) begin
-	      logic [4:0] wr_sector = {1'b0,writeSector}+(side?{1'b0,spt}:5'd0);
+	      // karabas: wr_sector and the buffer write at module level (block RAM)
 	      track_buffer_dirty[wr_sector] <= 1'b1;	      
-	      track_buffer[{wr_sector, writeAddr}] <= writeDataDecoded;
 	   end
 	end
 
@@ -285,7 +303,7 @@ always @(posedge clk) begin
 	// sd card has read sector and is now returning sector data
 	2: begin
 	   if(sd_data_en) begin
-	      track_buffer[{track_loader_sector, sd_addr}] <= sd_data_in;
+	      // karabas: the buffer write at module level (block RAM)
 
 	      // stop reading after byte 511	   
 	      if(sd_addr == 9'd511)

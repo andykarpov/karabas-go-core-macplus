@@ -1,0 +1,25 @@
+{
+    "id": "macplus",
+    "name": "Mac Plus",
+    "build": "26111101",
+    "visible": true,
+    "type": "osd",
+    "order": 22,
+    "eeprom_bank": 255,
+    "rtc_mode": 3,
+    "boards": {
+        "go": {"bitstream": "karabas_go.bin"},
+        "mini": {"bitstream": "karabas_mini.bin"},
+        "minig": {"bitstream": "karabas_minig.bin"}
+    },
+    "osd": [
+    {"type": "F", "name": "Floppy 1", "slot": 0, "extensions": ".dsk,.img", "dir": "/macplus", "hotkey": "Menu+F1"},
+    {"type": "F", "name": "Floppy 2", "slot": 1, "extensions": ".dsk,.img", "dir": "/macplus", "hotkey": "Menu+F2"},
+    {"type": "F", "name": "SCSI 6", "slot": 2, "extensions": ".vhd,.img,.hda", "dir": "/macplus", "hotkey": "Menu+F3"},
+    {"type": "F", "name": "SCSI 5", "slot": 3, "extensions": ".vhd,.img,.hda", "dir": "/macplus", "hotkey": "Menu+F4"},
+    {"type": "FL", "name": "ROM", "slot": 7, "extensions": ".rom,.bin", "dir": "/macplus", "filename": "plus.rom", "autoload": 1, "hotkey": "Menu+R"},
+    {"type": "S", "name": "Memory", "options": ["1 MB", "4 MB"], "default": 1, "hotkey": "Menu+M"},
+    {"type": "S", "name": "Fastboot", "options": ["Off", "On"], "default": 1},
+    {"type": "T", "name": "Reset", "hotkey": "F12"}
+    ]
+}

@@ -58,7 +58,8 @@ reg [7:0] ddra;
 reg [7:0] prb;
 reg [7:0] ddrb;
 
-wire [15:0] latch_reset_pattern = 16'h5550;
+// karabas: a localparam, XST takes no wire as an initial value
+localparam [15:0] latch_reset_pattern = 16'h5550;
 wire [7:0]  last_data = 8'h55;
     
 reg [7:0] port_a_c = 8'h00;
