@@ -64,7 +64,7 @@ always @(posedge clk) begin
 
 		// we need to add one to the seconds
 		clocktoseconds<= clocktoseconds + 1'd1;
-		if (15_599_999==clocktoseconds) // every 16mhz we increment secs by one
+		if (15_476_189==clocktoseconds) // karabas: the 15.476 MHz clock of the Karabas tops (650 / 42 MHz), was 15.6 MHz
 		begin
 			clocktoseconds<=0;
 			secs<=secs+1;

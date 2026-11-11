@@ -59,7 +59,7 @@ module rtc (
 			if (secs == 0)
 				secs <= timestamp[31:0] + 2082844800;
 			clocktoseconds <= clocktoseconds + 1'd1;
-			if (15599999 == clocktoseconds) begin
+			if (15476189 == clocktoseconds) begin
 				clocktoseconds <= 0;
 				secs <= secs + 1;
 			end

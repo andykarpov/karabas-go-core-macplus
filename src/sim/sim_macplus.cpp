@@ -24,9 +24,16 @@
 #include <vector>
 #include <ctime>
 #include "verilated.h"
+#ifdef SIM_BOARD
+// sim_board.v: the memory path of the board tops (mac_sdram, mac_sram, the frame buffer), clk = clk_2x
+#include "Vsim_board.h"
+typedef Vsim_board Vtop;
+#else
 #include "Vsim_top.h"
+typedef Vsim_top Vtop;
+#endif
 
-static Vsim_top *tb;
+static Vtop *tb;
 static double sim_ms = 0;
 static const double TICK_MS = 1000.0 / 16000000.0;
 
@@ -218,7 +225,7 @@ int main(int argc, char **argv) {
 	}
 
 	Verilated::commandArgs(argc, argv);
-	tb = new Vsim_top;
+	tb = new Vtop;
 	tb->reset = 1;
 	tb->ram_size = ram;
 	tb->fastboot = fastboot;
@@ -235,8 +242,14 @@ int main(int argc, char **argv) {
 	int last_leds = -1;
 	while (sim_ms < run_ms && !Verilated::gotFinish()) {
 		if (tb->reset && sim_ms > 0.5) tb->reset = 0;
+#ifdef SIM_BOARD
+		// two clocks of clk_2x per clock of the machine: clk_sys rises with the first, in the same eval
+		tb->clk = 0; tb->eval(); tb->clk = 1; tb->clk_sys = 1; tb->eval();
+		tb->clk = 0; tb->eval(); tb->clk = 1; tb->clk_sys = 0; tb->eval();
+#else
 		tb->clk = 0; tb->eval();
 		tb->clk = 1; tb->eval();
+#endif
 		sdc_step();
 		video_step();
 		if (tb->leds != last_leds) {
@@ -253,6 +266,27 @@ int main(int argc, char **argv) {
 		}
 	}
 	if (ppm_prefix) write_ppm();
+#ifdef SIM_BOARD
+	// the frame buffer of mac_video as PREFIX_fb.ppm (black = bit set)
+	if (ppm_prefix) {
+		char fn[512];
+		snprintf(fn, sizeof fn, "%s_fb.ppm", ppm_prefix);
+		FILE *f = fopen(fn, "wb");
+		if (f) {
+			fprintf(f, "P6\n512 342\n255\n");
+			for (int y = 0; y < 342; y++)
+				for (int x = 0; x < 512; x += 16) {
+					tb->fb_addr = y * 32 + x / 16;
+					tb->eval();
+					for (int b = 15; b >= 0; b--) {
+						uint8_t v = (tb->fb_word >> b) & 1 ? 0 : 255;
+						fputc(v, f); fputc(v, f); fputc(v, f);
+					}
+				}
+			fclose(f);
+		}
+	}
+#endif
 	printf("%9.3f ms end: frames %d, black %ld, sectors read %ld written %ld\n",
 		sim_ms, frames, last_black, sectors_read, sectors_written);
 

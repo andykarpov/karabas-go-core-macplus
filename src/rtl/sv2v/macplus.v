@@ -2,6 +2,7 @@ module macplus (
 	CLKIN,
 	RESET,
 	pixelOut,
+	vidLoad,
 	vsync,
 	hsync,
 	audio,
@@ -45,6 +46,7 @@ module macplus (
 	input CLKIN;
 	input RESET;
 	output wire pixelOut;
+	output wire vidLoad;
 	output wire vsync;
 	output wire hsync;
 	output wire [11:0] audio;
@@ -146,6 +148,7 @@ module macplus (
 	wire loadPixels;
 	wire _hblank;
 	wire _vblank;
+	assign vidLoad = loadPixels;
 	wire memoryOverlayOn;
 	wire selectSCSI;
 	wire selectSCC;
