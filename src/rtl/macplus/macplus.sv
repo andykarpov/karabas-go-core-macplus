@@ -52,7 +52,7 @@ module macplus
 	input [1:0]	       configRAMSize,     // 128k, 512k, 1MB or 4MB
 	input		       configMachineType, // 0 = Plus, 1 = SE
 	input [1:0]	       configFloppyWProt,
-	input		       configSCSIWProt,
+	input [1:0]	       configSCSIWProt,   // karabas: one bit per SCSI target (index 0 = ID 6)
 			  
         // interface to sd card
 	input [31:0]	       sdc_image_size,

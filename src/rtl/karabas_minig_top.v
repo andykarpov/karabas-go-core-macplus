@@ -25,7 +25,7 @@
 
  Disks: the F items Floppy 1, Floppy 2 (sdc slots 0, 1: the internal and external drive) and SCSI
  6, SCSI 5 (slots 2, 3) through img_sdc (the file mounter of the mcu) and mac_sdc (its bytes into
- the clock of the machine); a floppy image mounted read only is write protected.
+ the clock of the machine); an image mounted read only is a write protected disk (img_wp).
 
  Soft switches (the index of the item in the osd of core.json, file items included):
    0 Floppy 1 (F 0)   1 Floppy 2 (F 1)   2 SCSI 6 (F 2)   3 SCSI 5 (F 3)   4 ROM (FL 7)
@@ -519,7 +519,7 @@ macplus mac (
 	.configRAMSize(sw_mem_4m ? 2'b11 : 2'b10),
 	.configMachineType(1'b0),
 	.configFloppyWProt(img_wp[1:0]),
-	.configSCSIWProt(1'b0),
+	.configSCSIWProt(img_wp[3:2]),
 	.sdc_image_size(sdc_img_size[31:0]),
 	.sdc_image_mounted(m_mounted),
 	.sdc_lba(mac_lba),

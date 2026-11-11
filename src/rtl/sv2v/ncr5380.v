@@ -34,7 +34,7 @@ module ncr5380 (
 	parameter DEVS = 2;
 	input [DEVS - 1:0] img_mounted;
 	input [31:0] img_size;
-	input wr_prot;
+	input [DEVS - 1:0] wr_prot;
 	output reg [(DEVS * 32) - 1:0] io_lba;
 	output wire [DEVS - 1:0] io_rd;
 	output wire [DEVS - 1:0] io_wr;
@@ -167,7 +167,7 @@ module ncr5380 (
 				.din(dout),
 				.img_mounted(img_mounted[i]),
 				.img_blocks(img_size),
-				.wr_prot(wr_prot),
+				.wr_prot(wr_prot[i]),
 				.io_lba(sv2v_tmp_target_io_lba),
 				.io_rd(io_rd[i]),
 				.io_wr(io_wr[i]),

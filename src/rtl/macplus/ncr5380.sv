@@ -63,7 +63,7 @@ module ncr5380
 	// connections to io controller
 	input  [DEVS-1:0] img_mounted,
 	input      [31:0] img_size,
-        input             wr_prot,
+        input  [DEVS-1:0] wr_prot,   // karabas: one bit per target
 	
 	output reg [31:0] io_lba[DEVS],
 	output [DEVS-1:0] io_rd,
@@ -287,7 +287,7 @@ module ncr5380
 				// to sd card
 				.img_mounted(img_mounted[i]),
 				.img_blocks(img_size),
-			        .wr_prot( wr_prot ),
+			        .wr_prot( wr_prot[i] ),   // karabas: per target
 				.io_lba ( io_lba[i] ),
 				.io_rd  ( io_rd[i] ),
 				.io_wr  ( io_wr[i] ),

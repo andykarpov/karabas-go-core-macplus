@@ -189,7 +189,7 @@ macplus mac (
 	.configRAMSize(ram_size),
 	.configMachineType(1'b0),
 	.configFloppyWProt(floppy_wprot),
-	.configSCSIWProt(1'b0),
+	.configSCSIWProt(2'b00),
 	.sdc_image_size(sdc_image_size),
 	.sdc_image_mounted(sdc_image_mounted),
 	.sdc_lba(sdc_lba),

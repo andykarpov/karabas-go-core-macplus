@@ -69,7 +69,7 @@ module dataController (
 	input machineType;
 	input _systemReset;
 	input [1:0] floppy_wprot;
-	input scsi_wprot;
+	input [1:0] scsi_wprot;
 	output wire _cpuReset;
 	output wire [2:0] _cpuIPL;
 	input [15:0] cpuDataIn;
@@ -205,8 +205,8 @@ module dataController (
 	assign memoryDataOut = cpuDataIn;
 	wire [1:0] scsi_wr_int;
 	wire [1:0] scsi_ack;
-	assign scsi_wr = (scsi_wprot ? 2'b00 : scsi_wr_int);
-	assign scsi_ack = (scsi_wprot ? io_ack | scsi_wr_int : io_ack);
+	assign scsi_wr = scsi_wr_int & ~scsi_wprot;
+	assign scsi_ack = io_ack | (scsi_wr_int & scsi_wprot);
 	ncr5380 #(.DEVS(SCSI_DEVS)) scsi(
 		.clk(clk),
 		.reset(!_cpuReset),

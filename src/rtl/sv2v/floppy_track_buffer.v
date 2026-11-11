@@ -201,6 +201,16 @@ module floppy_track_buffer (
 						track_loader_state <= 8'd0;
 					end
 			endcase
+			if (sd_img_mounted[track_in_buffer_drive] && (track_in_buffer != 8'hff)) begin
+				track_in_buffer <= 8'hff;
+				track_buffer_dirty <= 24'h000000;
+				track_force_write_back <= 1'b0;
+			end
+			if ((sd_img_mounted[track_in_progress[7]] && (track_loader_state >= 8'd1)) && (track_loader_state <= 8'd4)) begin
+				track_in_progress <= 8'hfe;
+				if (track_loader_state == 8'd4)
+					track_in_buffer <= 8'hff;
+			end
 		end
 	end
 endmodule

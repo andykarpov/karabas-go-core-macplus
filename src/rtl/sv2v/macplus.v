@@ -60,7 +60,7 @@ module macplus (
 	input [1:0] configRAMSize;
 	input configMachineType;
 	input [1:0] configFloppyWProt;
-	input configSCSIWProt;
+	input [1:0] configSCSIWProt;
 	input [31:0] sdc_image_size;
 	localparam SCSI_DEVS = 2;
 	input [3:0] sdc_image_mounted;
