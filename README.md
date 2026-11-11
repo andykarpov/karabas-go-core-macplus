@@ -28,7 +28,7 @@ Status: checked on Mini G. The Go and Mini builds have not been run on a board y
 
 An image mounted read only (in the file browser of the OSD) is a write protected disk.
 
-Not supported: the serial ports (modem, printer), the physical floppy drive of the Go, HD20.
+Not supported: the serial ports (modem, printer), the physical floppy drive of the Go, HD20, formatting a floppy from the Mac (Initialize / Erase Disk fails: use a ready image). The 128K and 512K start to the disk with the question mark; their 400K drive speed control is missing, so they probably do not read a floppy yet. The open items are in [docs/BACKLOG.md](docs/BACKLOG.md) (Russian).
 
 ## Getting started
 
