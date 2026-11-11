@@ -38,7 +38,8 @@ module dataController (
 	serialOut,
 	serialCTS,
 	serialRTS,
-	timestamp,
+	rtc_in,
+	rtc_out,
 	pixelOut,
 	_hblank,
 	_vblank,
@@ -100,7 +101,8 @@ module dataController (
 	output wire serialOut;
 	input serialCTS;
 	output wire serialRTS;
-	input [32:0] timestamp;
+	input [46:0] rtc_in;
+	output wire [46:0] rtc_out;
 	output wire pixelOut;
 	input _hblank;
 	input _vblank;
@@ -305,7 +307,8 @@ module dataController (
 	rtc pram(
 		.clk(clk),
 		.reset(!_cpuReset),
-		.timestamp(timestamp),
+		.rtc_in(rtc_in),
+		.rtc_out(rtc_out),
 		._cs(_rtccs),
 		.ck(rtcck),
 		.dat_i(rtcdat_i),

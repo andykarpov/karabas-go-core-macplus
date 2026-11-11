@@ -4,7 +4,14 @@ module rtc (
 	input         clk,
 	input         reset,
 
-	input  [32:0] timestamp, // unix timestamp
+	// karabas: the clock and the PRAM are kept by the mcu (the clock chip of the board and
+	// /config/macplus.eep), through mac_clock of the board top: rtc_in = { set, secs[31:0], ld_we,
+	// ld_a[4:0], ld_d[7:0] } sets the seconds (Mac epoch) and loads PRAM bytes, rtc_out = { secs_wr,
+	// secs[31:0], pram_we, pram_a[4:0], pram_d[7:0] } gives the seconds, a pulse after each write of
+	// the Mac to them, and each PRAM byte the Mac writes (one clock each). Was a unix timestamp
+	// taken once.
+	input  [46:0] rtc_in,
+	output [46:0] rtc_out,
 	input         _cs,
 	input         ck,
 	input         dat_i,
@@ -48,6 +55,18 @@ end
 
 initial secs = 0;
 
+// karabas: the ports of mac_clock (see the header)
+wire        set_secs = rtc_in[46];
+wire [31:0] set_value = rtc_in[45:14];
+wire        ld_we = rtc_in[13];
+wire  [4:0] ld_a = rtc_in[12:8];
+wire  [7:0] ld_d = rtc_in[7:0];
+reg         secs_wr = 1'b0;
+reg         pram_we = 1'b0;
+reg   [4:0] pram_a = 5'd0;
+reg   [7:0] pram_d = 8'd0;
+assign rtc_out = { secs_wr, secs, pram_we, pram_a, pram_d };
+
 always @(posedge clk) begin
 	if (reset) begin
 		bit_cnt <= 0;
@@ -58,9 +77,9 @@ always @(posedge clk) begin
 	end 
 	else begin
 
-		// timestamp is only sent at core load
-		if (secs==0)
-				secs <= timestamp[31:0] + 2082844800; // difference between unix epoch and mac epoch
+		// karabas: the seconds from mac_clock instead of a unix timestamp taken once
+		secs_wr <= 1'b0;
+		pram_we <= 1'b0;
 
 		// we need to add one to the seconds
 		clocktoseconds<= clocktoseconds + 1'd1;
@@ -115,10 +134,25 @@ always @(posedge clk) begin
 							7'b1????01: ram[cmd[5:2]] <= {din[6:0], dat_i};
 							default: ;
 						endcase
+						// karabas: tell mac_clock (the seconds: their 4 bytes come one by one)
+						casez (cmd[6:0])
+							7'b000??01: secs_wr <= 1'b1;
+							7'b010??01: begin pram_we <= 1'b1; pram_a <= {3'b100, cmd[3:2]}; pram_d <= {din[6:0], dat_i}; end
+							7'b1????01: begin pram_we <= 1'b1; pram_a <= {1'b0, cmd[5:2]}; pram_d <= {din[6:0], dat_i}; end
+							default: ;
+						endcase
 					end
 				end
 			end
 		end
+	end
+	// karabas: the PRAM bytes and the seconds of the mcu (mac_clock) come while the machine is still
+	// in reset (the 68000 is held 100 ms after the top lets it go): taken also then
+	if (ld_we)
+		ram[ld_a] <= ld_d;
+	if (set_secs) begin
+		clocktoseconds <= 0;
+		secs <= set_value;
 	end
 end
 

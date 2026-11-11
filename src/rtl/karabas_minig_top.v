@@ -27,6 +27,10 @@
  6, SCSI 5 (slots 2, 3) through img_sdc (the file mounter of the mcu) and mac_sdc (its bytes into
  the clock of the machine); an image mounted read only is a write protected disk (img_wp).
 
+ Clock and PRAM: mac_clock between the RTC registers of the mcu (rtc_mode 0) and rtc.v: the time of
+ the clock chip at the start, back to it when the Mac sets its clock; the 20 PRAM bytes in registers
+ 0x10..0x23, kept by the firmware in /config/macplus.eep (eeprom_bank 4, eeprom_init pram.bin).
+
  Soft switches (the index of the item in the osd of core.json, file items included):
    0 Floppy 1 (F 0)   1 Floppy 2 (F 1)   2 SCSI 6 (F 2)   3 SCSI 5 (F 3)   4 ROM (FL 7)
    5 Memory (1 MB / 4 MB)   6 Fastboot (Off / On)   7 Reset
@@ -216,12 +220,13 @@ wire img_data_wr, img_result_wr, img_q_wr, img_q_ack;
 wire [8:0] img_data_addr;
 wire [15:0] img_sum;
 wire [23:0] img_q_di;
-wire [7:0] rtc_a, rtc_do;
+wire [7:0] rtc_a, rtc_di, rtc_do;
+wire rtc_cs, rtc_wr_n;
 
 kg_mcu #(
 	.BURST_MAX_MHZ(32),  // Rev.G has MCU_SCK on a global clock pin
 	.CS_FILTER(3),
-	.ENABLE_RTC(0),
+	.ENABLE_RTC(1),      // the clock and the PRAM of the Mac (mac_clock; rtc_mode 0, /config/macplus.eep)
 	.ENABLE_UART(0),
 	.ENABLE_MATRIX(0),
 	.ENABLE_DEBUG(0),
@@ -299,10 +304,10 @@ kg_mcu #(
 	.PS2_COMMAND(16'h0000),
 	.PS2_COMMAND_WR(1'b0),
 	.RTC_A(rtc_a),
-	.RTC_DI(8'd0),
+	.RTC_DI(rtc_di),
 	.RTC_DO(rtc_do),
-	.RTC_CS(1'b0),
-	.RTC_WR_N(1'b1),
+	.RTC_CS(rtc_cs),
+	.RTC_WR_N(rtc_wr_n),
 	.UART_RX_DATA(uart_rx_data),
 	.UART_RX_IDX(uart_rx_idx),
 	.UART_TX_DATA(uart_tx_data),
@@ -467,6 +472,23 @@ mac_sdc sdc (
 	.m_data_in(m_data_in)
 );
 
+// ------------------------------------------------------------------ clock, PRAM
+
+wire [46:0] mac_rtc_in, mac_rtc_out;
+mac_clock clock (
+	.clk(clk_2x),
+	.sys_t(sys_t),
+	.mcu_busy(mcu_busy),
+	.rtc_a(rtc_a),
+	.rtc_di(rtc_di),
+	.rtc_do(rtc_do),
+	.rtc_cs(rtc_cs),
+	.rtc_wr_n(rtc_wr_n),
+	.rtc_in(mac_rtc_in),
+	.rtc_out(mac_rtc_out),
+	.loaded()
+);
+
 // ------------------------------------------------------------------ keyboard, mouse
 
 wire kbd_strobe;
@@ -520,6 +542,8 @@ macplus mac (
 	.configMachineType(1'b0),
 	.configFloppyWProt(img_wp[1:0]),
 	.configSCSIWProt(img_wp[3:2]),
+	.rtc_in(mac_rtc_in),
+	.rtc_out(mac_rtc_out),
 	.sdc_image_size(sdc_img_size[31:0]),
 	.sdc_image_mounted(m_mounted),
 	.sdc_lba(mac_lba),

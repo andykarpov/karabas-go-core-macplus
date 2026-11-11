@@ -115,6 +115,8 @@ macplus mac (
 	.configMachineType(1'b0),
 	.configFloppyWProt(floppy_wprot),
 	.configSCSIWProt(2'b00),
+	.rtc_in(47'd0),   // no mac_clock: the PRAM defaults of rtc.v, the clock from 1904
+	.rtc_out(),
 	.sdc_image_size(sdc_image_size),
 	.sdc_image_mounted(sdc_image_mounted),
 	.sdc_lba(sdc_lba),

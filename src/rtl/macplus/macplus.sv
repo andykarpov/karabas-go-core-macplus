@@ -53,6 +53,10 @@ module macplus
 	input		       configMachineType, // 0 = Plus, 1 = SE
 	input [1:0]	       configFloppyWProt,
 	input [1:0]	       configSCSIWProt,   // karabas: one bit per SCSI target (index 0 = ID 6)
+
+	// karabas: the clock and the PRAM through mac_clock of the board top (see rtc.v)
+	input [46:0]	       rtc_in,
+	output [46:0]	       rtc_out,
 			  
         // interface to sd card
 	input [31:0]	       sdc_image_size,
@@ -139,7 +143,6 @@ localparam SCSI_DEVS = 2;
 
 // the status register is controlled by the on screen display (OSD)
 wire  [1:0] buttons;
-wire [32:0] TIMESTAMP;
 
 //
 // Serial Ports
@@ -352,7 +355,8 @@ dataController #(SCSI_DEVS) dc0
 	.serialRTS(serialRTS),
 
 	// rtc unix ticks
-	.timestamp(TIMESTAMP),
+	.rtc_in(rtc_in),    // karabas: mac_clock of the board top
+	.rtc_out(rtc_out),
 
 	// video
 	._hblank(_hblank),
