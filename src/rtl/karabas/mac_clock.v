@@ -15,7 +15,11 @@
    Mac writes goes to its register (kg_mcu sends it to the mcu, which saves the .eep).
  - The time: seconds since 1904-01-01 (the clock of the Mac, local time) from registers 0 (s),
    2 (min), 4 (hour, 24 h), 7 (date), 8 (month), 9 (year, 2000 + 0..99), BCD or binary (bit 2 of
-   register B), into rtc.v once with the PRAM; rtc.v counts on from there. When the Mac sets its
+   register B), into rtc.v once with the PRAM; rtc.v counts on from there. The firmware fills
+   registers 0..255 from the .eep at the load of the core, the time registers too, and sends the
+   time only 500 ms later (rtc_handle): a date that is not valid is read again every 17 ms, for 4 s
+   at most. loaded tells the top, which holds the machine in reset until then (the Mac reads its
+   clock once, at the start). When the Mac sets its
    clock (the Control Panel: four byte writes), the seconds are taken 4 ms after the last of
    them, turned into a date and written to registers 0, 2, 4, 6 (day of the week, Sunday 1),
    7, 8, 9: the mcu sets the clock chip. A date before 2000 is not written (the registers have
@@ -29,7 +33,9 @@
 */
 
 module mac_clock #(
-	parameter QUIET_BITS = 17   // 2^17 clocks of clk_2x = 4.2 ms after the last write of the seconds
+	parameter QUIET_BITS = 17,  // 2^17 clocks of clk_2x = 4.2 ms after the last write of the seconds
+	parameter RETRY_BITS = 19,  // 2^19 clocks = 17 ms between two reads of a date that is not valid yet
+	parameter RETRIES = 240     // then (4 s) 2000-01-01 00:00: a board without a clock chip
 ) (
 	input  wire        clk,        // clk_2x
 	input  wire        sys_t,
@@ -118,7 +124,8 @@ wire [16:0] date_days = 17'd35064 + y365 + { 10'd0, (t_y + 7'd3) >> 2 } + { 8'd0
 // ------------------------------------------------------------------ the state machine
 
 localparam S_BOOT = 4'd0, S_PRAM = 4'd1, S_TIME = 4'd2, S_DAYS = 4'd3, S_SET = 4'd4, S_IDLE = 4'd5,
-	S_QUIET = 4'd6, S_DIV = 4'd7, S_YEAR = 4'd8, S_MONTH = 4'd9, S_WDAY = 4'd10, S_WRITE = 4'd11;
+	S_QUIET = 4'd6, S_DIV = 4'd7, S_YEAR = 4'd8, S_MONTH = 4'd9, S_WDAY = 4'd10, S_WRITE = 4'd11,
+	S_RETRY = 4'd12;
 
 reg [3:0] state = S_BOOT;
 reg [3:0] step = 4'd0;
@@ -130,6 +137,8 @@ reg p_pend = 1'b0;          // a PRAM byte of the Mac to write
 reg [4:0] p_a = 5'd0;
 reg [7:0] p_d = 8'd0;
 reg secs_dirty = 1'b0;
+reg [RETRY_BITS-1:0] retry_t = 0;
+reg [7:0] retries = 8'd0;
 wire [3:0] wd5 = { 1'b0, n[2:0] } + 4'd5;   // S_WDAY: n = days % 7 there
 
 wire port_free = state != S_PRAM && state != S_TIME && state != S_WRITE;
@@ -236,9 +245,18 @@ always @(posedge clk) begin
 
 	// seconds = days * 86400 + h * 3600 + min * 60 + s, by additions
 	S_DAYS: begin
-		if (t_y > 7'd99 || t_mo == 7'd0 || t_mo > 7'd12 || t_d == 7'd0 || t_d > 7'd31) begin
-			// no valid date (a board without a clock chip): 2000-01-01 00:00
-			t_y <= 7'd0; t_mo <= 7'd1; t_d <= 7'd1; t_h <= 7'd0; t_min <= 7'd0; t_s <= 7'd0;
+		if (t_y > 7'd99 || t_mo == 7'd0 || t_mo > 7'd12 || t_d == 7'd0 || t_d > 7'd31 || t_h > 7'd23 ||
+		    t_min > 7'd59 || t_s > 7'd59) begin
+			if (retries == RETRIES[7:0]) begin
+				// still no valid date (a board without a clock chip): 2000-01-01 00:00
+				t_y <= 7'd0; t_mo <= 7'd1; t_d <= 7'd1; t_h <= 7'd0; t_min <= 7'd0; t_s <= 7'd0;
+			end
+			else begin
+				// not sent yet by the mcu: read the registers again a little later
+				retries <= retries + 8'd1;
+				retry_t <= {RETRY_BITS{1'b1}};
+				state <= S_RETRY;
+			end
 		end
 		else begin
 			n <= date_days;
@@ -265,6 +283,15 @@ always @(posedge clk) begin
 				state <= S_IDLE;
 			end
 		endcase
+
+	S_RETRY:
+		if (retry_t != 0)
+			retry_t <= retry_t - 1'b1;
+		else begin
+			step <= 4'd0;
+			rd <= 2'd0;
+			state <= S_TIME;
+		end
 
 	S_IDLE:
 		if (secs_dirty && quiet == 0 && !(sys_edge && m_secs_wr)) begin

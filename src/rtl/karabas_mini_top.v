@@ -410,9 +410,10 @@ always @(posedge clk_2x) begin
 end
 
 wire rom_loading = file_active && file_slot == 8'd7;
+wire clock_loaded;   // mac_clock (clk_2x; it only rises, once)
 reg mac_reset = 1'b1;
 always @(posedge clk_sys)
-	mac_reset <= areset || !ram_ready || mem_rst != 8'd0 || sw_reset || mcu_busy || rom_loading;
+	mac_reset <= areset || !ram_ready || mem_rst != 8'd0 || sw_reset || mcu_busy || rom_loading || !clock_loaded;
 
 // ------------------------------------------------------------------ disks
 
@@ -492,7 +493,7 @@ mac_clock clock (
 	.rtc_wr_n(rtc_wr_n),
 	.rtc_in(mac_rtc_in),
 	.rtc_out(mac_rtc_out),
-	.loaded()
+	.loaded(clock_loaded)   // the Mac reads its clock at the start: held in reset until it is set
 );
 
 // ------------------------------------------------------------------ keyboard, mouse

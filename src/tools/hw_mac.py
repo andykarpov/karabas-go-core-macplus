@@ -7,6 +7,8 @@ Steps:
   m DX DY [N]       mouse move, N times (default 1), button up
   d DX DY [N]       the same with the button down (a drag / a menu)
   up                the button up
+  pick X Y          the button down already (a menu open): down until the item at (X, Y) of the
+                    1280 x 720 capture is shown inverted, then up
   click             a click where the pointer is
   key KEYS          a key or chord of kg_board (alt+o, enter, ...)
   wait S            seconds
@@ -33,11 +35,11 @@ MACROS = {
     # the pointer to the menu bar over the Apple menu (from anywhere left of x ~ 100)
     "home": "m 0 -10 20",
     # Apple menu > Control Panel (from home): the General panel shows the time and PRAM settings
-    "control_panel": "home | d 0 10 10 | d 0 9 4 | d 0 6 2 | up | wait 20",
+    "control_panel": "home | d 0 0 | pick 340 180 | wait 20",
     # Control Panel open, pointer where control_panel left it > the Fast radio of the insertion point
     "cp_fast": "m 10 0 76 | m 0 11 5 | m 0 3 | click",
     # from the Fast radio > Special menu > Shut Down
-    "shutdown": "m -10 0 41 | m 0 -10 25 | d 0 10 23 | up | wait 15",
+    "shutdown": "m -10 0 41 | m 0 -10 25 | d 0 0 | pick 700 270 | wait 15",
 }
 
 out = os.environ.get("FRAMES", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "sim", "build", "hw.png"))
@@ -46,18 +48,44 @@ port = None
 
 
 def at(line, tries=4):
+    """One line, then a sync (delivered before the next, as kg_board does: the same rate). A sync
+    that fails does not send the line again: the move would be doubled."""
     global port
+    sent = False
     for t in range(tries):
         try:
             if port is None:
                 port = k.Port()
-            port.at(line)
-            port.at("AT+KARABAS=sync", k.SYNC_SECONDS)   # delivered, as kg_board does: the same rate
+            if not sent:
+                port.at(line)
+                sent = True
+            port.at("AT+KARABAS=sync", k.SYNC_SECONDS)
             return
-        except Exception as e:          # the CDC port resets now and then with a core running
+        except (Exception, SystemExit):   # the CDC port resets now and then with a core running (kg_board exits)
             port = None
             time.sleep(2)
     print("lost: " + line, file=sys.stderr)
+
+
+def pixel(x, y):
+    """The grey level at (x, y) of a 1280 x 720 frame of /dev/video10."""
+    r = subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-f", "v4l2", "-i", "/dev/video10",
+                        "-vf", "select=gte(n\\,3),crop=1:1:%d:%d,format=gray" % (x, y), "-frames:v", "1",
+                        "-f", "rawvideo", "-"], capture_output=True)
+    return r.stdout[0] if r.stdout else 255
+
+
+def menu_pick(x, y, step=4, limit=60):
+    """With the button down, down by step until (x, y) of the capture is dark (the item under
+    the pointer is shown inverted), then the button up. False if it never is."""
+    for _ in range(limit):
+        if pixel(x, y) < 96:
+            at("AT+KARABAS=mouse:0,0,0")
+            return True
+        at("AT+KARABAS=mouse:0,%d,1" % step)
+    at("AT+KARABAS=mouse:0,0,0")
+    print("menu_pick %d %d: not reached" % (x, y), file=sys.stderr)
+    return False
 
 
 def shot(name):
@@ -79,6 +107,8 @@ def run(steps):
             n = int(w[3]) if len(w) > 3 else 1
             for _ in range(n):
                 at("AT+KARABAS=mouse:%s,%s,%d" % (w[1], w[2], 1 if c == "d" else 0))
+        elif c == "pick":
+            menu_pick(int(w[1]), int(w[2]))
         elif c == "up":
             at("AT+KARABAS=mouse:0,0,0")
         elif c == "click":

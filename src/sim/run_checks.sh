@@ -17,7 +17,7 @@ vvp -n build/tb_mac_sdc | tee build/tb_mac_sdc.log | tail -1
 grep -q "tb_mac_sdc: 0 errors" build/tb_mac_sdc.log
 echo "==== sim/tb_mac_clock"
 iverilog -g2005 -o build/tb_mac_clock tb_mac_clock.v ../rtl/karabas/mac_clock.v ../rtl/sv2v/rtc.v
-for a in "" "+bin=1" "+y=2024 +mo=2 +d=29 +h=23 +mi=59 +s=59" "+y=2040 +mo=2 +d=6 +h=6 +mi=28 +s=15"; do
+for a in "" "+bin=1" "+y=2024 +mo=2 +d=29 +h=23 +mi=59 +s=59" "+y=2040 +mo=2 +d=6 +h=6 +mi=28 +s=15" "+late=50000" "+late=-1"; do
 	vvp -n build/tb_mac_clock $a | tee build/tb_mac_clock.log | tail -2 | head -1
 	grep -q "tb_mac_clock: 0 errors" build/tb_mac_clock.log
 done

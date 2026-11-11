@@ -28,7 +28,7 @@ wire [46:0] rtc_in;
 reg [46:0] rtc_out = 0;
 wire loaded;
 
-mac_clock #(.QUIET_BITS(10)) dut (
+mac_clock #(.QUIET_BITS(10), .RETRY_BITS(10)) dut (
 	.clk(clk), .sys_t(sys_t), .mcu_busy(mcu_busy),
 	.rtc_a(rtc_a), .rtc_di(rtc_di), .rtc_do(rtc_do), .rtc_cs(rtc_cs), .rtc_wr_n(rtc_wr_n),
 	.rtc_in(rtc_in), .rtc_out(rtc_out), .loaded(loaded)
@@ -87,7 +87,7 @@ function [7:0] enc(input integer v, input integer bin);
 	enc = bin ? v : ((v / 10) << 4) | (v % 10);
 endfunction
 
-integer y, mo, d, h, mi, s, bin, cases, c, r, days, wday;
+integer y, mo, d, h, mi, s, bin, cases, c, r, days, wday, late;
 integer ey, emo, ed, eh, emi, es, ew;
 reg [31:0] want;
 
@@ -149,17 +149,32 @@ initial begin
 	if (!$value$plusargs("s=%d", s)) s = 17;
 	if (!$value$plusargs("bin=%d", bin)) bin = 0;
 	if (!$value$plusargs("cases=%d", cases)) cases = 8;
+	if (!$value$plusargs("late=%d", late)) late = 0;
 	for (k = 0; k < 256; k = k + 1) begin regs[k] = 8'hEE; wr_count[k] = 0; end
 	for (k = 0; k < 20; k = k + 1) begin regs[8'h10 + k] = k * 8'h1D + 8'h03; ld_count[k] = 0; end
 	regs[8'h0B] = bin ? 8'h06 : 8'h02;
-	regs[0] = enc(s, bin); regs[2] = enc(mi, bin); regs[4] = enc(h, bin);
-	regs[7] = enc(d, bin); regs[8] = enc(mo, bin); regs[9] = enc(y - 2000, bin);
+	// late: the time registers hold the bytes of the .eep (0) at first, the mcu sends the time
+	// late clocks after the start (-1: never; the date is then 2000-01-01 00:00)
+	if (late != 0) begin
+		regs[0] = 0; regs[2] = 0; regs[4] = 0; regs[7] = 0; regs[8] = 0; regs[9] = 0;
+	end
+	else begin
+		regs[0] = enc(s, bin); regs[2] = enc(mi, bin); regs[4] = enc(h, bin);
+		regs[7] = enc(d, bin); regs[8] = enc(mo, bin); regs[9] = enc(y - 2000, bin);
+	end
+	if (late < 0) begin y = 2000; mo = 1; d = 1; h = 0; mi = 0; s = 0; end
 
 	// 1. the start
 	repeat (50) @(posedge clk);
 	if (set_count != 0 || ld_count[0] != 0) begin $display("ERROR: rtc.v written while the mcu is busy"); errors = errors + 1; end
 	mcu_busy <= 0;
-	repeat (200000) @(posedge clk);
+	if (late > 0) begin
+		repeat (late) @(posedge clk);
+		if (loaded || set_count != 0) begin $display("ERROR: loaded before the time came"); errors = errors + 1; end
+		regs[0] = enc(s, bin); regs[2] = enc(mi, bin); regs[4] = enc(h, bin);
+		regs[7] = enc(d, bin); regs[8] = enc(mo, bin); regs[9] = enc(y - 2000, bin);
+	end
+	repeat (late < 0 ? 400000 : 200000) @(posedge clk);
 	for (k = 0; k < 20; k = k + 1)
 		if (ld_count[k] != 1 || pram[k] !== regs[8'h10 + k]) begin
 			$display("ERROR: PRAM %0d: %0d loads, %02x, register %02x", k, ld_count[k], pram[k], regs[8'h10 + k]);

@@ -1,7 +1,7 @@
 {
     "id": "macplus",
     "name": "Mac Plus",
-    "build": "26111105",
+    "build": "26111106",
     "visible": true,
     "type": "osd",
     "order": 22,
