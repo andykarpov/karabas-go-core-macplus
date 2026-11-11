@@ -30,6 +30,7 @@ module macplus
 
         // video and audio outputs
         output		       pixelOut,
+	output		       vidLoad,  // karabas: a video word is loaded at the end of this bus cycle (the frame buffer of the board top)
 	output		       vsync,
 	output		       hsync,
 
@@ -168,6 +169,7 @@ wire _memoryUDS, _memoryLDS;
 
 // peripherals
 wire vid_alt, loadPixels, _hblank, _vblank;
+assign vidLoad = loadPixels;   // karabas
 wire memoryOverlayOn, selectSCSI, selectSCC, selectIWM, selectVIA, selectRAM, selectROM, selectSEOverlay;
 wire [15:0] dataControllerDataOut;
 
