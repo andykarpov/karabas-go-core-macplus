@@ -1,17 +1,18 @@
 {
     "id": "macplus",
     "name": "Mac Plus",
-    "build": "26111103",
+    "build": "26111106",
     "visible": true,
     "type": "osd",
     "order": 22,
-    "eeprom_bank": 255,
-    "rtc_mode": 3,
+    "eeprom_bank": 4,
+    "rtc_mode": 0,
     "boards": {
         "go": {"bitstream": "karabas_go.bin"},
         "mini": {"bitstream": "karabas_mini.bin"},
         "minig": {"bitstream": "karabas_minig.bin"}
     },
+    "eeprom_init": "pram.bin",
     "osd": [
     {"type": "F", "name": "Floppy 1", "slot": 0, "extensions": ".dsk,.img", "dir": "/macplus", "hotkey": "Menu+F1"},
     {"type": "F", "name": "Floppy 2", "slot": 1, "extensions": ".dsk,.img", "dir": "/macplus", "hotkey": "Menu+F2"},

@@ -55,7 +55,8 @@ module dataController (
 	output		       serialRTS,
 
 	// RTC
-	input [32:0]	       timestamp,
+	input [46:0]	       rtc_in,    // karabas: mac_clock of the board top (see rtc.v), was timestamp
+	output [46:0]	       rtc_out,
 
 	// video:
 	output		       pixelOut, 
@@ -359,7 +360,8 @@ module dataController (
 	rtc pram (
 		.clk        (clk),
 		.reset      (!_cpuReset),
-		.timestamp  (timestamp),
+		.rtc_in     (rtc_in),    // karabas
+		.rtc_out    (rtc_out),
 		._cs        (_rtccs),
 		.ck         (rtcck),
 		.dat_i      (rtcdat_i),

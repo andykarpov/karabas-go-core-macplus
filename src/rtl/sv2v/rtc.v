@@ -1,7 +1,8 @@
 module rtc (
 	clk,
 	reset,
-	timestamp,
+	rtc_in,
+	rtc_out,
 	_cs,
 	ck,
 	dat_i,
@@ -9,7 +10,8 @@ module rtc (
 );
 	input clk;
 	input reset;
-	input [32:0] timestamp;
+	input [46:0] rtc_in;
+	output wire [46:0] rtc_out;
 	input _cs;
 	input ck;
 	input dat_i;
@@ -48,7 +50,17 @@ module rtc (
 		ram[5'h13] = 8'h6c;
 	end
 	initial secs = 0;
-	always @(posedge clk)
+	wire set_secs = rtc_in[46];
+	wire [31:0] set_value = rtc_in[45:14];
+	wire ld_we = rtc_in[13];
+	wire [4:0] ld_a = rtc_in[12:8];
+	wire [7:0] ld_d = rtc_in[7:0];
+	reg secs_wr = 1'b0;
+	reg pram_we = 1'b0;
+	reg [4:0] pram_a = 5'd0;
+	reg [7:0] pram_d = 8'd0;
+	assign rtc_out = {secs_wr, secs, pram_we, pram_a, pram_d};
+	always @(posedge clk) begin
 		if (reset) begin
 			bit_cnt <= 0;
 			receiving <= 1;
@@ -56,8 +68,8 @@ module rtc (
 			dat_o <= 1;
 		end
 		else begin
-			if (secs == 0)
-				secs <= timestamp[31:0] + 2082844800;
+			secs_wr <= 1'b0;
+			pram_we <= 1'b0;
 			clocktoseconds <= clocktoseconds + 1'd1;
 			if (15476189 == clocktoseconds) begin
 				clocktoseconds <= 0;
@@ -93,7 +105,7 @@ module rtc (
 									;
 							endcase
 						end
-						if (receiving && !cmd_mode)
+						if (receiving && !cmd_mode) begin
 							casez (cmd[6:0])
 								7'b0000001: secs[7:0] <= {din[6:0], dat_i};
 								7'b0000101: secs[15:8] <= {din[6:0], dat_i};
@@ -104,8 +116,31 @@ module rtc (
 								default:
 									;
 							endcase
+							casez (cmd[6:0])
+								7'b000zz01: secs_wr <= 1'b1;
+								7'b010zz01: begin
+									pram_we <= 1'b1;
+									pram_a <= {3'b100, cmd[3:2]};
+									pram_d <= {din[6:0], dat_i};
+								end
+								7'b1zzzz01: begin
+									pram_we <= 1'b1;
+									pram_a <= {1'b0, cmd[5:2]};
+									pram_d <= {din[6:0], dat_i};
+								end
+								default:
+									;
+							endcase
+						end
 					end
 				end
 			end
 		end
+		if (ld_we)
+			ram[ld_a] <= ld_d;
+		if (set_secs) begin
+			clocktoseconds <= 0;
+			secs <= set_value;
+		end
+	end
 endmodule

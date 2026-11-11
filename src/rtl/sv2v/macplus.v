@@ -17,6 +17,8 @@ module macplus (
 	configMachineType,
 	configFloppyWProt,
 	configSCSIWProt,
+	rtc_in,
+	rtc_out,
 	sdc_image_size,
 	sdc_image_mounted,
 	sdc_lba,
@@ -61,6 +63,8 @@ module macplus (
 	input configMachineType;
 	input [1:0] configFloppyWProt;
 	input [1:0] configSCSIWProt;
+	input [46:0] rtc_in;
+	output wire [46:0] rtc_out;
 	input [31:0] sdc_image_size;
 	localparam SCSI_DEVS = 2;
 	input [3:0] sdc_image_mounted;
@@ -119,7 +123,6 @@ module macplus (
 	wire pixel;
 	assign pixelOut = (n_reset ? pixel : 1'b0);
 	wire [1:0] buttons;
-	wire [32:0] TIMESTAMP;
 	wire serialOut;
 	wire serialIn = UART_RXD;
 	wire serialRTS;
@@ -300,7 +303,8 @@ module macplus (
 		.serialOut(serialOut),
 		.serialCTS(serialCTS),
 		.serialRTS(serialRTS),
-		.timestamp(TIMESTAMP),
+		.rtc_in(rtc_in),
+		.rtc_out(rtc_out),
 		._hblank(_hblank),
 		._vblank(_vblank),
 		.pixelOut(pixel),
