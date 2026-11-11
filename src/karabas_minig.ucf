@@ -205,6 +205,13 @@ NET "TMDS_N<1>"        LOC="A12"    | IOSTANDARD = TMDS_33; # HDMI_D1N
 NET "TMDS_N<2>"        LOC="A11"    | IOSTANDARD = TMDS_33; # HDMI_D2N
 NET "TMDS_N<3>"        LOC="A14"    | IOSTANDARD = TMDS_33; # HDMI_CKN
 
+# The TMDS serialisers (325 MHz): their shift registers next to the ODDR2 of the pins (top edge), as in
+# core-atari2600. Left to PAR they land far from the pins: the route into the ODDR2 was 4.2 - 5.0 ns
+# against a period of 3.08 ns (builds 26111102 / 26111103 with map -t 2, -0.6 / -1.7 ns).
+INST "hdmi/chn*.serial/*" AREA_GROUP = "AG_TMDS";
+INST "hdmi/serial_clk/*" AREA_GROUP = "AG_TMDS";
+AREA_GROUP "AG_TMDS" RANGE = SLICE_X26Y68:SLICE_X45Y77;
+
 # ADC
 NET "ADC_CLK"          LOC="T6"     | IOSTANDARD = LVCMOS33;
 NET "ADC_DOUT"         LOC="R5"     | IOSTANDARD = LVCMOS33;

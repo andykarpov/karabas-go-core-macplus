@@ -357,9 +357,25 @@ always @(posedge clk) begin
 	   // buffer for this sector not dirty, anymore
 	   track_buffer_dirty[track_sector_to_write] <= 1'b0;
 	   track_loader_state <= 8'd0;
-	end 
-	
-      endcase      
+	end
+
+      endcase
+
+      // karabas: a new image in a drive (the OSD can swap it without an eject of the Mac) makes
+      // what the buffer holds of the old one stale: the track in the buffer would still be
+      // "ready" for the new image, and its dirty sectors would be written into it. Drop both
+      // (the unwritten sectors of the old image are lost, as with a disk pulled out of a real
+      // drive), and let a track being loaded from the old image end invalid: fe is no track
+      // ({drive, side, track 0..79}), so state 4 aborts or stores an invalid buffer.
+      if(sd_img_mounted[track_in_buffer_drive] && track_in_buffer != 8'hff) begin
+	 track_in_buffer <= 8'hff;
+	 track_buffer_dirty <= 24'h000000;
+	 track_force_write_back <= 1'b0;
+      end
+      if(sd_img_mounted[track_in_progress[7]] && track_loader_state >= 8'd1 && track_loader_state <= 8'd4) begin
+	 track_in_progress <= 8'hfe;
+	 if(track_loader_state == 8'd4) track_in_buffer <= 8'hff;   // its last sector just came
+      end
    end
 end   
 

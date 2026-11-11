@@ -10,7 +10,7 @@ module dataController (
 	input		       machineType, // 0 - Mac Plus, 1 - Mac SE
 	input		       _systemReset,
 	input [1:0]	       floppy_wprot,
-	input 	               scsi_wprot,
+	input [1:0]            scsi_wprot,  // karabas: one bit per target
 
 	// 68000 CPU control:
 	output		       _cpuReset,
@@ -226,10 +226,10 @@ module dataController (
         wire [1:0] scsi_ack;
 
         // forward write request only if writes are allowed
-        assign scsi_wr = scsi_wprot?2'b00:scsi_wr_int;
+        assign scsi_wr = scsi_wr_int & ~scsi_wprot;   // karabas: per target
    
         // directly acknowledge any wriote request if no writes allowed
-        assign scsi_ack = scsi_wprot?(io_ack|scsi_wr_int):io_ack;   
+        assign scsi_ack = io_ack | (scsi_wr_int & scsi_wprot);   // karabas: per target
    
 	// SCSI
 	ncr5380 #(SCSI_DEVS) scsi(
