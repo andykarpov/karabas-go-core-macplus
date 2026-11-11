@@ -17,6 +17,8 @@ module sim_top (
 	input  wire        reset,
 	input  wire [1:0]  ram_size,     // 0 128K, 1 512K, 2 1M, 3 4M
 	input  wire        fastboot,
+	input  wire        machine_se,   // the model: 0 Plus (and 128K / 512K), 1 SE
+	input  wire [1:0]  rom_size,     // 0 64K (128K / 512K), 1 128K (Plus), 2 256K (SE)
 	input  wire [1:0]  floppy_wprot,
 
 	input  wire [5:0]  mouse,
@@ -50,13 +52,13 @@ module sim_top (
 assign cpu_addr = mac.cpuAddr;
 assign cpu_as_n = mac._cpuAS;
 
-// ------------------------------------------------------------------ ROM 128 KB
+// ------------------------------------------------------------------ ROM up to 256 KB
 
-reg [7:0] rom_b [0:131071];
+reg [7:0] rom_b [0:262143];
 integer fd, n;
 reg [1023:0] rom_name;
 initial begin
-	for (n = 0; n < 131072; n = n + 1) rom_b[n] = 8'h00;
+	for (n = 0; n < 262144; n = n + 1) rom_b[n] = 8'h00;
 	if ($value$plusargs("rom=%s", rom_name)) begin
 		fd = $fopen(rom_name, "rb");
 		if (fd == 0) begin $display("sim_top: cannot open the ROM"); $finish; end
@@ -68,6 +70,7 @@ end
 
 wire        rom_oe_n;
 wire [17:0] rom_addr;
+wire [16:0] rom_word = rom_size == 2'd2 ? rom_addr[16:0] : rom_size == 2'd1 ? { 1'b0, rom_addr[15:0] } : { 2'b00, rom_addr[14:0] };
 reg  [15:0] rom_data;
 
 // ------------------------------------------------------------------ RAM 4 MB
@@ -86,7 +89,8 @@ always @(posedge clk) begin
 	// the data are there from the clock that ends busPhase 5 on: stable in phases 6 and 7, as
 	// the NanoMac harness gives them during phase 6
 	if (phase == 3'd5) begin
-		if (!rom_oe_n) rom_data <= { rom_b[{ rom_addr[15:0], 1'b0 }], rom_b[{ rom_addr[15:0], 1'b1 }] };
+		// the ROM file from offset 0 at any size, as the board has it (the 64K one: A16 / A17 dropped)
+		if (!rom_oe_n) rom_data <= { rom_b[{ rom_word, 1'b0 }], rom_b[{ rom_word, 1'b1 }] };
 		if (ram_sel && ram_oe) ram_do <= { ram_hi[ram_addr], ram_lo[ram_addr] };
 	end
 	if (phase == 3'd6 && ram_sel && ram_we) begin
@@ -109,10 +113,10 @@ macplus mac (
 	.MOUSE(mouse),
 	.kbd_strobe(kbd_strobe),
 	.kbd_data(kbd_data),
-	.configROMSize(1'b1),
+	.configROMSize(rom_size),
 	.configFastboot(fastboot),
 	.configRAMSize(ram_size),
-	.configMachineType(1'b0),
+	.configMachineType(machine_se),
 	.configFloppyWProt(floppy_wprot),
 	.configSCSIWProt(2'b00),
 	.rtc_in(47'd0),   // no mac_clock: the PRAM defaults of rtc.v, the clock from 1904

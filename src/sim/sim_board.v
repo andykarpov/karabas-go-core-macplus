@@ -17,6 +17,8 @@ module sim_board (
 	input  wire        reset,
 	input  wire [1:0]  ram_size,
 	input  wire        fastboot,
+	input  wire        machine_se,   // not used: the board memory path is checked with the Plus ROM
+	input  wire [1:0]  rom_size,
 	input  wire [1:0]  floppy_wprot,
 
 	input  wire [5:0]  mouse,
@@ -184,7 +186,7 @@ macplus mac (
 	.MOUSE(mouse),
 	.kbd_strobe(kbd_strobe),
 	.kbd_data(kbd_data),
-	.configROMSize(1'b1),
+	.configROMSize(2'd1),
 	.configFastboot(fastboot),
 	.configRAMSize(ram_size),
 	.configMachineType(1'b0),

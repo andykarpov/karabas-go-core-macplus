@@ -19,9 +19,9 @@
  analysis takes the 32 ns between their edges); clk_65 is crossed with synchronisers, the frame
  buffer is a block RAM with two clocks.
 
- Memory: the RAM of the Mac (1 or 4 MB) in the SDRAM (mac_sdram, one access per bus cycle), the ROM
- (128 KB) in the SRAM (mac_sram), loaded by the FL item ROM (slot 7) while the machine is held in
- reset.
+ Memory: the RAM of the Mac (128 KB .. 4 MB) in the SDRAM (mac_sdram, one access per bus cycle), the
+ ROMs (128 KB Plus, 256 KB SE, 64 KB 128K / 512K) in the SRAM (mac_sram), loaded by their FL items
+ while the machine is held in reset.
 
  Video: the words the machine loads into its shifter go into a frame buffer (mac_video), out as
  1024 x 768, every pixel 2 x 2.
@@ -34,9 +34,11 @@
  the clock chip at the start, back to it when the Mac sets its clock; the 20 PRAM bytes in registers
  0x10..0x23, kept by the firmware in /config/macplus.eep (eeprom_bank 4, eeprom_init pram.bin).
 
- Soft switches (the index of the item in the osd of core.json, file items included):
-   0 Floppy 1 (F 0)   1 Floppy 2 (F 1)   2 SCSI 6 (F 2)   3 SCSI 5 (F 3)   4 ROM (FL 7)
-   5 Memory (1 MB / 4 MB)   6 Fastboot (Off / On)   7 Reset
+ Soft switches (the "index" of core.json; 0..4 the file items Floppy 1 / 2, SCSI 6 / 5, ROM Plus):
+   5 Memory (1 MB / 4 MB, Plus and SE)   6 Fastboot (Off / On, Plus ROM)   7 Reset
+   8 Model (Plus / SE / 512Ke / 512K / 128K)
+ ROM files (FL, autoloaded when present): ROM Plus slot 7 /macplus/plus.rom, ROM SE slot 6
+ /macplus/se.rom, ROM 64K slot 5 /macplus/mac512.rom (the 128K and the 512K).
 */
 
 module karabas_mini_top (
@@ -354,8 +356,8 @@ assign SD_CLK = mcu_sck_ibufg;
 
 // ------------------------------------------------------------------ soft switches
 
-wire [8*8-1:0] sw;
-kg_soft_switches #(.N(8)) soft_switches (
+wire [9*8-1:0] sw;
+kg_soft_switches #(.N(9)) soft_switches (
 	.clk(clk_2x),
 	.command(softsw_command),
 	.regs(sw),
@@ -364,21 +366,44 @@ kg_soft_switches #(.N(8)) soft_switches (
 wire sw_mem_4m = sw[5*8];     // Memory: 0 1 MB, 1 4 MB
 wire sw_fastboot = sw[6*8];   // Fastboot: 0 off, 1 on
 wire sw_reset = sw[7*8];
+wire [2:0] sw_model = sw[8*8 +: 3];   // Model: 0 Plus, 1 SE, 2 512Ke, 3 512K, 4 128K
+
+// the model: the SE has its own ROM (256 KB) and ADB; the 512K and 128K the 64K ROM; the 512Ke is a
+// Plus ROM with 512 KB; the Memory item sizes the Plus and the SE
+wire model_se = sw_model == 3'd1;
+wire model_64k = sw_model == 3'd3 || sw_model == 3'd4;
+wire [1:0] cfg_rom_size = model_se ? 2'd2 : model_64k ? 2'd0 : 2'd1;
+wire [1:0] cfg_ram_size = sw_model == 3'd4 ? 2'b00 : (sw_model == 3'd2 || sw_model == 3'd3) ? 2'b01 :
+	sw_mem_4m ? 2'b11 : 2'b10;
 
 // ------------------------------------------------------------------ ROM in the SRAM
 
-// the ROM file of the FL item (slot 7) at 000000, the bytes past 128 KB dropped
-wire rom_file_wr = file_wr && file_slot == 8'd7 && file_addr[31:17] == 15'd0;
+// the ROM files of the FL items, each in its part of the SRAM (mac_rom_map); the model picks one (the
+// machine is reset when it changes)
+wire rom_file_wr;
+wire [21:0] rom_file_addr;
+wire [20:0] rom_raddr;
 wire rom_oe_n;
 wire [17:0] mac_rom_addr;
 wire [15:0] mac_rom_data;
 
+mac_rom_map rom_map (
+	.rom_size(cfg_rom_size),
+	.rom_addr(mac_rom_addr),
+	.raddr(rom_raddr),
+	.file_slot(file_slot),
+	.file_addr(file_addr),
+	.file_wr(file_wr),
+	.we(rom_file_wr),
+	.waddr(rom_file_addr)
+);
+
 mac_sram sram (
 	.clk(clk_2x),
-	.raddr({ 5'd0, mac_rom_addr[15:0] }),
+	.raddr(rom_raddr),
 	.rdata(mac_rom_data),
 	.we(rom_file_wr),
-	.waddr({ 5'd0, file_addr[16:0] }),
+	.waddr(rom_file_addr),
 	.wdata(file_data),
 	.MA(MA),
 	.MD(MD),
@@ -398,18 +423,18 @@ always @(posedge clk_2x)
 wire sdr_reset_n = sdr_wait == 13'h1FFF;
 wire ram_ready;
 
-// a change of the memory size is a reset (the ROM sizes the RAM at its start)
-reg mem_d = 1'b0;
+// a change of the memory size or of the model is a reset (the ROM sizes the RAM at its start)
+reg [3:0] mem_d = 4'd0;
 reg [7:0] mem_rst = 8'hFF;
 always @(posedge clk_2x) begin
-	mem_d <= sw_mem_4m;
-	if (sw_mem_4m != mem_d || areset)
+	mem_d <= { sw_model, sw_mem_4m };
+	if ({ sw_model, sw_mem_4m } != mem_d || areset)
 		mem_rst <= 8'hFF;
 	else if (mem_rst != 8'd0)
 		mem_rst <= mem_rst - 8'd1;
 end
 
-wire rom_loading = file_active && file_slot == 8'd7;
+wire rom_loading = file_active && (file_slot == 8'd7 || file_slot == 8'd6 || file_slot == 8'd5);
 wire clock_loaded;   // mac_clock (clk_2x; it only rises, once)
 reg mac_reset = 1'b1;
 always @(posedge clk_sys)
@@ -543,10 +568,10 @@ macplus mac (
 	.MOUSE({ 1'b1, mouse }),
 	.kbd_strobe(kbd_strobe),
 	.kbd_data(kbd_data),
-	.configROMSize(1'b1),
+	.configROMSize(cfg_rom_size),
 	.configFastboot(sw_fastboot),
-	.configRAMSize(sw_mem_4m ? 2'b11 : 2'b10),
-	.configMachineType(1'b0),
+	.configRAMSize(cfg_ram_size),
+	.configMachineType(model_se),
 	.configFloppyWProt(img_wp[1:0]),
 	.configSCSIWProt(img_wp[3:2]),
 	.rtc_in(mac_rtc_in),

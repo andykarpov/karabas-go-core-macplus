@@ -1,7 +1,7 @@
 {
     "id": "macplus",
     "name": "Mac Plus",
-    "build": "26111106",
+    "build": "26111107",
     "visible": true,
     "type": "osd",
     "order": 22,
@@ -18,9 +18,12 @@
     {"type": "F", "name": "Floppy 2", "slot": 1, "extensions": ".dsk,.img", "dir": "/macplus", "hotkey": "Menu+F2"},
     {"type": "F", "name": "SCSI 6", "slot": 2, "extensions": ".vhd,.img,.hda", "dir": "/macplus", "hotkey": "Menu+F3"},
     {"type": "F", "name": "SCSI 5", "slot": 3, "extensions": ".vhd,.img,.hda", "dir": "/macplus", "hotkey": "Menu+F4"},
-    {"type": "FL", "name": "ROM", "slot": 7, "extensions": ".rom,.bin", "dir": "/macplus", "filename": "plus.rom", "autoload": 1, "hotkey": "Menu+R"},
-    {"type": "S", "name": "Memory", "options": ["1 MB", "4 MB"], "default": 1, "hotkey": "Menu+M"},
-    {"type": "S", "name": "Fastboot", "options": ["Off", "On"], "default": 1},
-    {"type": "T", "name": "Reset", "hotkey": "F12"}
+    {"type": "S", "name": "Model", "options": ["Plus", "SE", "512Ke", "512K", "128K"], "default": 0, "index": 8},
+    {"type": "S", "name": "Memory", "options": ["1 MB", "4 MB"], "default": 1, "hotkey": "Menu+M", "index": 5},
+    {"type": "S", "name": "Fastboot", "options": ["Off", "On"], "default": 1, "index": 6},
+    {"type": "FL", "name": "ROM Plus", "slot": 7, "extensions": ".rom,.bin", "dir": "/macplus", "filename": "plus.rom", "autoload": 1, "hotkey": "Menu+R"},
+    {"type": "FL", "name": "ROM SE", "slot": 6, "extensions": ".rom,.bin", "dir": "/macplus", "filename": "se.rom", "autoload": 1},
+    {"type": "FL", "name": "ROM 64K", "slot": 5, "extensions": ".rom,.bin", "dir": "/macplus", "filename": "mac512.rom", "autoload": 1},
+    {"type": "T", "name": "Reset", "hotkey": "F12", "index": 7}
     ]
 }

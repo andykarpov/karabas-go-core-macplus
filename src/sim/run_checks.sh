@@ -2,6 +2,7 @@
 # The checks of the core (about five minutes):
 #   tb_mac_sdc (iverilog, seconds): the sector bytes of img_sdc into the clock of the machine
 #   tb_mac_clock (iverilog, seconds): the PRAM and the time between the mcu registers and rtc.v
+#   tb_mac_rom_map (iverilog, seconds): the ROM files of the models in the SRAM, written and read back
 #   tb_floppy_swap (iverilog, seconds): a new floppy image in a drive drops the buffered track
 #   tb_mac_video (iverilog, ~35 s): the frame buffer out as 1024 x 768, every pixel of a frame
 #   the Plus ROM without a disk up to the grey desktop with the "?" disk (3 s of machine time, 1 MB,
@@ -21,6 +22,10 @@ for a in "" "+bin=1" "+y=2024 +mo=2 +d=29 +h=23 +mi=59 +s=59" "+y=2040 +mo=2 +d=
 	vvp -n build/tb_mac_clock $a | tee build/tb_mac_clock.log | tail -2 | head -1
 	grep -q "tb_mac_clock: 0 errors" build/tb_mac_clock.log
 done
+echo "==== sim/tb_mac_rom_map"
+iverilog -g2005 -o build/tb_mac_rom_map tb_mac_rom_map.v ../rtl/karabas/mac_rom_map.v
+vvp -n build/tb_mac_rom_map | tee build/tb_mac_rom_map.log | tail -2 | head -1
+grep -q "tb_mac_rom_map: 0 errors" build/tb_mac_rom_map.log
 echo "==== sim/tb_floppy_swap"
 iverilog -g2005 -o build/tb_floppy_swap tb_floppy_swap.v ../rtl/sv2v/floppy_track_buffer.v
 vvp -n build/tb_floppy_swap | tee build/tb_floppy_swap.log | tail -2 | head -1
