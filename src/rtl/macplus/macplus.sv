@@ -47,7 +47,7 @@ module macplus
 	input [9:0]	       kbd_data,
 
         // set the real-world inputs to sane defaults
-	input		       configROMSize,     // 64k or 128K ROM
+	input [1:0]	       configROMSize,     // karabas: 0 = 64K (128K / 512K), 1 = 128K (Plus), 2 = 256K (SE) ROM; was unused (forced by the model)
 	input		       configFastboot,    // disable rom/ram check
 	input [1:0]	       configRAMSize,     // 128k, 512k, 1MB or 4MB
 	input		       configMachineType, // 0 = Plus, 1 = SE
@@ -250,7 +250,7 @@ addrController ac0
 	._cpuLDS(_cpuLDS),
 	._cpuRW(_cpuRW),
 	._cpuAS(_cpuAS),
-	.configROMSize({configMachineType,~configMachineType}),
+	.configROMSize(configROMSize),   // karabas: the model of the top (with the 64K ROM of the 128K / 512K)
 	.configRAMSize(configRAMSize), 
 	.romAddr(romAddr),
 	.ramAddr(ram_addr),
@@ -283,8 +283,9 @@ addrController ac0
 );
 
 /* fastboot patches the rom check and the ramcheck away */
+// karabas: the patches are at addresses of the Plus ROM only: not with the ROM of the SE or the 64K one
 wire [15:0] romDataMod =
-	    configFastboot?romDataPatched:
+	    (configFastboot && configROMSize == 2'd1)?romDataPatched:
 	    romData;   
 
 wire	    trigger = (cpuAddr == 0);   

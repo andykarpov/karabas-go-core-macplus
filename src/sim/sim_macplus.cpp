@@ -1,6 +1,6 @@
 // sim_macplus.cpp - verilator harness of sim_top.v: the Mac Plus machine of Ф1 on memory models.
 //
-//   sim_macplus [--ms N] [--ram 0..3] [--no-fastboot] [--fd0 FILE] [--fd1 FILE] [--scsi0 FILE]
+//   sim_macplus [--ms N] [--ram 0..3] [--model 0 Plus | 1 SE | 2 64K ROM] [--no-fastboot] [--fd0 FILE] [--fd1 FILE] [--scsi0 FILE]
 //               [--scsi1 FILE] [--ppm PREFIX] [--every N] [--report MS] [--trace-sdc]
 //               [--expect-frames N] [--expect-sdc N] [--expect-pc-in LO:HI] [--expect-black LO:HI]
 //
@@ -195,7 +195,7 @@ static void video_step(void) {
 
 int main(int argc, char **argv) {
 	double run_ms = 3000, report_ms = 250;
-	int ram = 2, fastboot = 1, expect_frames = -1;
+	int ram = 2, fastboot = 1, expect_frames = -1, model = 0;
 	long expect_sdc = -1;
 	long pc_lo = -1, pc_hi = -1, black_lo = -1, black_hi = -1;
 	for (int i = 1; i < argc; i++) {
@@ -203,6 +203,7 @@ int main(int argc, char **argv) {
 		if (a == "--ms" && i + 1 < argc) run_ms = atof(argv[++i]);
 		else if (a == "--ram" && i + 1 < argc) ram = atoi(argv[++i]);
 		else if (a == "--no-fastboot") fastboot = 0;
+		else if (a == "--model" && i + 1 < argc) model = atoi(argv[++i]);   // 0 Plus, 1 SE, 2 64K ROM
 		else if (a == "--fd0" && i + 1 < argc) { if (!load_image(0, argv[++i])) return 2; }
 		else if (a == "--fd1" && i + 1 < argc) { if (!load_image(1, argv[++i])) return 2; }
 		else if (a == "--scsi0" && i + 1 < argc) { if (!load_image(2, argv[++i])) return 2; }
@@ -229,6 +230,8 @@ int main(int argc, char **argv) {
 	tb->reset = 1;
 	tb->ram_size = ram;
 	tb->fastboot = fastboot;
+	tb->machine_se = model == 1;
+	tb->rom_size = model == 1 ? 2 : model == 2 ? 0 : 1;
 	tb->floppy_wprot = 0;
 	tb->mouse = 0x1f;
 	tb->kbd_strobe = 0;

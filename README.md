@@ -17,7 +17,8 @@ Status: checked on Mini G. The Go and Mini builds have not been run on a board y
 ## Features
 
 - **CPU:** 68000 at 7.7 MHz (fx68k; the Mac Plus has 7.83 MHz).
-- **Memory:** 1 MB or 4 MB of RAM (OSD item Memory), the 128 KB ROM of the Plus from the SD card.
+- **Models:** Mac Plus, Mac SE (ADB keyboard and mouse), 512Ke (the Plus ROM with 512 KB), 512K and 128K (the 64 KB ROM).
+- **Memory:** 1 MB or 4 MB of RAM for the Plus and the SE (OSD item Memory); the ROMs from the SD card.
 - **Video:** 512 x 342 monochrome, shown as 1024 x 768 at 60 Hz, every pixel 2 x 2.
 - **Floppies:** two 800 KB drives (internal and external), `.dsk` images, read and write.
 - **Hard disks:** two SCSI disks (ID 6 and ID 5), `.vhd` / `.img` / `.hda` images, read and write.
@@ -27,12 +28,12 @@ Status: checked on Mini G. The Go and Mini builds have not been run on a board y
 
 An image mounted read only (in the file browser of the OSD) is a write protected disk.
 
-Not supported: the serial ports (modem, printer), the physical floppy drive of the Go, the SE / 512Ke / 128K models.
+Not supported: the serial ports (modem, printer), the physical floppy drive of the Go, HD20.
 
 ## Getting started
 
 1. Copy `macplus.kg` (one file for Go, Mini and Mini G) to the root of the SD card.
-2. Put the Mac Plus ROM as `/macplus/plus.rom` on the SD card (128 KB; the ROM of the Plus, v3, checksum 4D1F8172, works), and your disk images in `/macplus`.
+2. Put the Mac Plus ROM as `/macplus/plus.rom` on the SD card (128 KB; the ROM of the Plus, v3, checksum 4D1F8172, works), and your disk images in `/macplus`. For the other models: `/macplus/se.rom` (the 256 KB ROM of the SE) and `/macplus/mac512.rom` (the 64 KB ROM of the 128K / 512K). The ROMs that are there are loaded at the start.
 3. Choose Mac Plus in the core menu. Without a disk the Mac shows the disk with the question mark. Open the OSD (**Menu+Esc**) and insert a system disk in Floppy 1 (System 6.0.x on an 800 KB disk works).
 
 "Menu" is the Windows key of the keyboard.
@@ -43,12 +44,13 @@ Not supported: the serial ports (modem, printer), the physical floppy drive of t
 |---|---|---|
 | Floppy 1, Floppy 2 | `.dsk` / `.img` image (800 KB) | Menu+F1, Menu+F2 |
 | SCSI 6, SCSI 5 | `.vhd` / `.img` / `.hda` image | Menu+F3, Menu+F4 |
-| ROM | `.rom` / `.bin` file (autoloaded from `/macplus/plus.rom`) | Menu+R |
-| Memory | 1 MB / 4 MB | Menu+M |
-| Fastboot | Off / On: no RAM test and no ROM checksum at start | |
+| Model | Plus / SE / 512Ke / 512K / 128K | |
+| Memory | 1 MB / 4 MB (Plus and SE) | Menu+M |
+| Fastboot | Off / On: no RAM test and no ROM checksum at start (Plus ROM) | |
+| ROM Plus, ROM SE, ROM 64K | `.rom` / `.bin` file (autoloaded from `/macplus/plus.rom`, `se.rom`, `mac512.rom`) | Menu+R (Plus) |
 | Reset | resets the machine | F12 |
 
-The settings and the chosen images are remembered.
+The settings and the chosen images are remembered. A change of Model or Memory restarts the machine.
 
 Shut the Mac down (Special > Shut Down) before you switch the core or the board off: the Mac keeps disk writes in its RAM cache, and an image left without them may not start any more.
 

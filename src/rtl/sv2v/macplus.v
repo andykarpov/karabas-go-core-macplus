@@ -57,7 +57,7 @@ module macplus (
 	input [5:0] MOUSE;
 	input kbd_strobe;
 	input [9:0] kbd_data;
-	input configROMSize;
+	input [1:0] configROMSize;
 	input configFastboot;
 	input [1:0] configRAMSize;
 	input configMachineType;
@@ -219,7 +219,7 @@ module macplus (
 		._cpuLDS(_cpuLDS),
 		._cpuRW(_cpuRW),
 		._cpuAS(_cpuAS),
-		.configROMSize({configMachineType, ~configMachineType}),
+		.configROMSize(configROMSize),
 		.configRAMSize(configRAMSize),
 		.romAddr(romAddr),
 		.ramAddr(ram_addr),
@@ -250,7 +250,7 @@ module macplus (
 		.loadSound(loadSound)
 	);
 	wire [15:0] romDataPatched = ({romAddr, 1'b0} == 18'h00d7a ? 16'h6022 : ({romAddr, 1'b0} == 18'h00ea8 ? 16'h4e71 : ({romAddr, 1'b0} == 18'h00e90 ? 16'h4e71 : romData)));
-	wire [15:0] romDataMod = (configFastboot ? romDataPatched : romData);
+	wire [15:0] romDataMod = (configFastboot && (configROMSize == 2'd1) ? romDataPatched : romData);
 	wire trigger = cpuAddr == 0;
 	dataController #(.SCSI_DEVS(SCSI_DEVS)) dc0(
 		.clk(clk_sys),
