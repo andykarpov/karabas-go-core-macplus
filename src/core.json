@@ -10,7 +10,7 @@
     "boards": {
         "go": {"bitstream": "karabas_go.bin"},
         "mini": {"bitstream": "karabas_mini.bin"},
-        "minig": {"bitstream": "karabas_minig.bin"}
+        "minig": {"bitstream": "karabas_minig.bin", "link": 2}
     },
     "eeprom_init": "pram.bin",
     "osd": [
