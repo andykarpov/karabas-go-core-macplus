@@ -8,9 +8,9 @@
     "eeprom_bank": 4,
     "rtc_mode": 0,
     "boards": {
-        "go": {"bitstream": "karabas_go.bin"},
-        "mini": {"bitstream": "karabas_mini.bin"},
-        "minig": {"bitstream": "karabas_minig.bin", "link": 2}
+        "go": {"link": 2, "build": "26111347", "bitstream": "karabas_go.bin"},
+        "mini": {"link": 2, "build": "26111347", "bitstream": "karabas_mini.bin"},
+        "minig": {"link": 2, "build": "26111347", "bitstream": "karabas_minig.bin"}
     },
     "eeprom_init": "pram.bin",
     "osd": [
