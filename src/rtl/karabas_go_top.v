@@ -201,8 +201,8 @@ assign clk_2x = pll_clk[4];
 assign clk_sys = pll_clk[5];
 wire areset = ~locked;
 
-// the pixel clock of the VGA DAC
-ODDR2 oddr_v_clk (.Q(V_CLK), .C0(clk_65), .C1(~clk_65), .CE(1'b1), .D0(1'b1), .D1(1'b0), .R(1'b0), .S(1'b0));
+// the pixel clock of the VGA DAC, inverted: the DAC takes the pixel on the rising V_CLK, the middle of the pixel
+ODDR2 oddr_v_clk (.Q(V_CLK), .C0(clk_65), .C1(~clk_65), .CE(1'b1), .D0(1'b0), .D1(1'b1), .R(1'b0), .S(1'b0));
 
 // a register of clk_sys that toggles every clock: the clk_2x side finds the clk_sys edges by it
 reg sys_t = 1'b0;
